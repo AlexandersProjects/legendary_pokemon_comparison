@@ -1,0 +1,243 @@
+---
+title: "Pokemon"
+output: html_notebook
+---
+
+# Pokemon Aufgabe 
+
+```{r}
+ library(readxl)
+pokemon <- read_excel("F:/Alfatraining/Statistik mit R/t_test/uebung4.xlsx")
+View(pokemon)
+```
+
+```{r}
+library(psych)
+describe(pokemon)
+```
+
+```{r}
+count_legendary <- table(unlist(pokemon$Legendary))
+count_legendary
+```
+
+```{r}
+counts<- table(Attack = pokemon$Attack, Legendary= pokemon$Legendary)
+
+barplot(counts, main="Balkendiagramm Pokemons",
+col=c("deepskyblue","tomato"),
+ylab="Anzahl Pokemon",xlab = "Pokemon",
+beside=T,
+names.arg =c("Legendär Nein", "Legendär Ja"),
+#legend = rownames(counts),       
+ args.legend = list(x = "topright"))
+```
+# 1) Hypothese
+
+## ungerichtete Hypothese
+
+H1: Es gibt einen Unterschied zwischen dem Angriff von legendären und Nicht-legendären Pokemon. 
+$$M_{L}≠M_{NL}$$
+H0: Es gibt keinen Unterschied zwischen dem Angriff von legendären und Nicht-legendären Pokemon. 
+$$M_{L}= M_{NL}$$
+
+## gerichtete Hypothese
+
+H1: Der Angriff bei legendären ist höher als bei Nicht-legendären Pokemon.
+$$M_{L} > M_{NL}$$
+
+H0: Der Angriff bei legendären ist niedriger oder gleichhoch wie bei Nicht-legendären Pokemon.
+$$M_{L} \leq M_{NL}$$
+```{r}
+nrow(pokemon)
+```
+
+# t-kritisch für die ungerichtete Hypothese
+```{r}
+# ungerichtete Hypothese
+qt(0.975, df=798)
+```
+
+# Voraussetzungen des t-Tests für unabhängige Stichproben
+
+Die abhängige Variable ist min. intervallskaliert -> Angriff(AV)
+
+Es liegt eine unabhängige Variable vor, mittels der die beiden zu vergleichenden Gruppen gebildet werden. -> Ja, Legendär und Nicht-Legendär
+
+Das untersuchte Merkmal ist in den Grundgesamtheiten der beiden Gruppen normalverteilt -> siehe Histogramm
+
+Homogenität der Varianzen: Die Gruppen kommen aus Grundgesamtheiten mit annähernd identischer Varianz -> siehe Levene-Test
+
+Die einzelnen Messwerte sind voneinander unabhängig (das Verhalten einer Versuchsperson hat keinen Einfluss auf das Verhalten einer anderen) -> ist gegeben.
+
+# Prüfung der Normalverteilung mithilfe des Histogramms
+```{r}
+library(dplyr)
+library(ggplot2)
+
+  pokemon %>%
+  group_by(Legendary) %>%
+    
+  ggplot(aes(Attack)) + 
+    
+    geom_histogram( binwidth=4, aes(fill=Legendary), color="#e9ecef", alpha=0.7 ) + # Erstelle ein Histogramm, Unterteilung, Farbe + Transparenz
+    
+  facet_wrap(~Legendary)+ # Zwei Graphen
+    
+    theme_classic()+ #Farbschema
+    
+    labs(x="Gruppierungen", y="Anzahl") # Beschriftung
+```
+```{r}
+library(dplyr)
+library(ggplot2)
+
+  pokemon %>%
+  group_by(Legendary) %>%
+    
+  ggplot(aes(Attack)) + 
+    
+    geom_histogram( binwidth=4, aes(fill=Legendary), color="#e9ecef", alpha=0.7 ) + # Erstelle ein Histogramm, Unterteilung, Farbe + Transparenz
+    
+  #facet_wrap(~Legendary)+ # Zwei Graphen
+    
+    theme_classic()+ #Farbschema
+    
+    labs(x="Gruppierungen", y="Anzahl") # Beschriftung
+```
+Es liegt ungefähr eine Normalverteilung vor.
+
+# Deskriptive Statistiken
+
+```{r}
+#library(dplyr)
+pokemon %>%
+group_by(Legendary) %>%
+  summarize(Anzahl = n(), Mittelwert = mean(Attack), Median = median(Attack), Standardabweichung = sd(Attack)) %>%
+  mutate_if(is.numeric, round, 2)
+```
+Es zeigt sich für diese Fragestellung einen Mittelwertsunterschied. Der Angriff bei Nicht-legendären Pokemon ist niedriger (M = 75.67 SD = 30.49, n = 735) als bei legendären (M = 116.68	 SD = 30.35, n = 65).
+
+# Test auf Varianzhomogenität (Levene-Test)
+Der t-Test für unabhängige Gruppen setzt Varianzhomogenität voraus. Liegt Varianzheterogenität vor (also unterschiedliche Varianzen), so müssen unter anderem die Freiheitsgerade des t-Wertes angepasst werden. Ob die Varianzen nun homogen (“gleich”) sind, lässt sich mit dem Levene-Test auf Varianzhomogenität prüfen.
+
+Der Levene-Test verwendet die Nullhypothese, dass sich die beiden Varianzen nicht unterscheiden. Daher bedeutet ein nicht signifikantes Ergebnis, dass sich die Varianzen nicht unterscheiden und also Varianzhomogenität vorliegt. Ist der Test signifikant, so wird von Varianzheterogenität ausgegangen.
+
+```{r}
+library(car)
+
+leveneTest(pokemon$Attack, pokemon$Legendary, center = mean)
+# erst AV dann UV
+```
+
+```{r}
+library(car)
+
+leveneTest(erwerb$Sicherheitsgefuehl, erwerb$Selbststaendig, center = median)
+# erst AV dann UV
+```
+Also es ist zuerkennen, das Homogenität vorliegt, da der Levene-Test nicht signifikant ist. Daher können wir von gleichen Varianzen ausgehen (F(1, 798) = .0031, p = .9559). Es ist daher nicht notwendig eine Welch-Korrektur durchzuführen.
+
+Mit Welch-Korrektur: p < 0.05 => Ergebnis Signifikant –> Varianzen heterogen
+
+Ohne Welch-Korrektur: p > 0.05 => Ergebnis nicht Signifikant –> Varianzen homogen –> H0 mit Annahme Var1=Var2
+
+# Ergebnisse des t-Tests für unabhängige Stichproben
+
+An dieser Stelle findet die eigentliche Auswertung des t-Testes statt. Beim t-test wird die t-Verteilung verwendet.
+
+Auch hier ist auf die Reihenfolge zu achten erst AV und dann UV. Da in diesem Beispiel eine ungerichtete Hypothese verwendet wird mit einem Sig.-Niveau von 0.05,ist “con= 0.95, alt =”two.sided"" zu verwenden. Sollten Sie sich jedoch entscheiden eine gerichtete Hypothese zu verwenden, dann empfiehlt es sich folgende Zeilen zu ersetzen “con= 0.95, alt =”greater"" Je nach Richtung “less” or “greater”. Sollte eine 1 bei p-value stehen ist es genau die andere Richtung.
+
+“Var.eq =True” bedeutet, dass die Varianzen homogen (gleich) sind, bzw. “Var.eq =False” das die Varianzen hetrogen sind.
+
+## Variante 1: ohne Welch - Korrektur
+```{r}
+##ungerichtete Hypothese
+test1<- t.test(pokemon$Attack~pokemon$Legendary, var.eq = TRUE, con= 0.95, alt = "two.sided")
+test1
+```
+Die Teststatistik betraegt t = -10.397 und der zugehörige Signifikanzwert p = 2.2e-16. Damit ist der Unterschied signifikant:
+
+Mittelwerte der beiden Arten der Selbstständigkeit unterscheiden sich (t(798) = -10.397, p = 2.513e-05, n= 798)
+
+## Variante 1.2: Gerichtete Hypothese
+```{r}
+## Gerichtete Hypothese
+test2<- t.test(pokemon$Attack~pokemon$Legendary, var.eq = TRUE, con= 0.95, alt = "less") #"greater"
+test2
+```
+Die Teststatistik betraegt t = -10.397 und der zugehörige Signifikanzwert p = 2.2e-16. Damit ist der Unterschied signifikant:
+
+Mittelwerte der beiden Arten des Pokemon unterscheiden sich (t(798) = -10.397, p = 2.2e-16, n= 798)
+
+
+## Variante 2: MIT Welch-Korrektur (nicht hier)
+```{r}
+welch<- t.test(pokemon$Attack~pokemon$Legendary, var.eq = FALSE, con= 0.95, alt = "two.sided")
+welch
+```
+mit Welch-Korrektur(t(75.883) = -10.438, p = 2.52e-16)
+
+
+# Berechnung der Effektstärke
+## Bei gleichgroßen Gruppen (nicht hier)
+
+$$
+r=\sqrt{\frac{t^2}{t^2+df}}
+$$
+```{r}
+eff <- sqrt ((test1$statistic^2 )/ (test1$statistic^2 + test1$parameter))
+sprintf("Die Effektstärke liegt bei %.2f",eff )
+```
+Zur Beurteilung der Groesse des Effektes dient die Einteilung von Cohen (1992):
+
+$$
+\begin{align}
+\text{Schwacher Effekt: } 0.10 &< ||r|| < 0.30             \\
+\text{Schwacher bis mittlerer Effekt: } 0.30 &= ||r||      \\
+\text{Mittlerer Effekt: } 0.30 &< ||r|| < 0.50             \\
+\text{Mittlerer bis starker Effekt: }0.50 &= ||r||         \\
+\text{Starker Effekt: } 0.50 &< ||r||        
+\end{align}
+$$
+
+Im Rahmen des t-Tests fuer unabhängige Stichprobe berechnen wir nach Pearson und interpretieren nach Cohen(1992).
+
+Damit entspricht eine Effektstaerke von .35 einem starken Effekt.
+
+# ALTERNATIVE
+## Bei ungleichgroßen Gruppen
+
+$$
+d = |(\frac {n1+n2}{n1*n2}+ 0.5*d^2/df) * (\frac{(n1+n2}{df})|
+$$
+Diese Formel verwendet das EffSize-Package - Cooper et al. (2009):
+
+```{r}
+library(effsize)
+
+cohen.d(d = pokemon$Attack, f= pokemon$Legendary)
+```
+Interpretation von d nach Cohen (1988):
+
+$$
+\begin{align}
+\text{Schwacher Effekt: } 0.20 &< ||d|| < 0.50             \\
+\text{Schwacher bis mittlerer Effekt: } 0.50 &= ||d||      \\
+\text{Mittlerer Effekt: } 0.50 &< ||d|| < 0.80             \\
+\text{Mittlerer bis starker Effekt: }0.80 &= ||d||         \\
+\text{Starker Effekt: } 0.80 &< ||d||        
+\end{align}
+$$
+
+Damit entspricht eine Effektstaerke von 3.438535 einem starken Effekt.
+
+# Aussage mit ungerichteter Hypothese
+
+Es gibt einen signifikanten Unterschied zwischen dem Angriff von legendären (M = 116.68, SD = 30.35, n = 65) und nicht-legendären (M = 75.67, SD = 30.49, n = 735) Pokemon (t(798) = -10.397, p = 2.513e-05, n= 798).Die Effektstärke liegt bei 3.438535 und entspricht damit einem starken Effekt nach Cohen (1988). H0 kann verworfen werden.
+
+
+# Aussage mit gerichteter Hypothese
+
+Es gibt einen signifikant negativen Unterschied zwischen dem Angriff von nicht-legendären (M = 75.67, SD = 30.49, n = 735) und legendären (M = 116.68, SD = 30.35, n = 65) Pokemon (t(798) = -10.397, p = 2.513e-05, n= 798).Die Effektstärke liegt bei d = 3.438535 und entspricht damit einem starken Effekt nach Cohen (1988). H0 kann verworfen werden.
+Daraus folgt, das der Angriff bei legendären  höher istals bei Nicht-legendären Pokemon.
